@@ -170,3 +170,46 @@ test "PriorityQueue bubbleUp" {
     try testing.expectEqual(@as(u8, 'C'), pq.nodes[0].?.character);
     try testing.expectEqual(@as(u8, 'E'), pq.nodes[1].?.character);
 }
+
+test "PriorityQueue remove" {
+    var pq = try PriorityQueue.init(testing.allocator, 10);
+    defer pq.deinit();
+
+    // Helper function to create nodes
+    const createNode = struct {
+        fn func(allocator: std.mem.Allocator, char: u8, freq: usize) !*Node {
+            const node = try allocator.create(Node);
+            node.* = Node.init(char, freq);
+            return node;
+        }
+    }.func;
+
+    // Test case 1: Remove from empty queue
+    try testing.expectEqual(@as(?*Node, null), try pq.remove());
+
+    // Test case 2: Remove single element
+    try pq.insert(try createNode(testing.allocator, 'A', 10));
+    const removed1 = (try pq.remove()) orelse return error.UnexpectedNull;
+    defer testing.allocator.destroy(removed1);
+    try testing.expectEqual(@as(u8, 'A'), removed1.character);
+    try testing.expectEqual(@as(usize, 0), pq.len);
+
+    // Test case 3: Remove with reordering
+    try pq.insert(try createNode(testing.allocator, 'B', 20));
+    try pq.insert(try createNode(testing.allocator, 'C', 15));
+    try pq.insert(try createNode(testing.allocator, 'D', 25));
+
+    const removed2 = (try pq.remove()) orelse return error.UnexpectedNull;
+    defer testing.allocator.destroy(removed2);
+    try testing.expectEqual(@as(u8, 'C'), removed2.character);
+    try testing.expectEqual(@as(usize, 2), pq.len);
+
+    const removed3 = (try pq.remove()) orelse return error.UnexpectedNull;
+    defer testing.allocator.destroy(removed3);
+    try testing.expectEqual(@as(u8, 'B'), removed3.character);
+
+    // Clean up remaining nodes
+    while (try pq.remove()) |node| {
+        testing.allocator.destroy(node);
+    }
+}
