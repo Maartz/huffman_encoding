@@ -1,8 +1,9 @@
 const std = @import("std");
+const huffman_tree = @import("tree.zig");
+
 const fs = std.fs;
 const io = std.io;
 const ascii = std.ascii;
-const testing = std.testing;
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -18,12 +19,11 @@ pub fn main() !void {
     var letter_counts = try countLetters(reader, allocator);
     defer letter_counts.deinit();
 
-    var it = letter_counts.iterator();
-    while (it.next()) |entry| {
-        const char = entry.key_ptr.*;
-        const count = entry.value_ptr.*;
-        std.debug.print("'{c}': {}\n", .{ char, count });
-    }
+    const root = try huffman_tree.PriorityQueue.buildTree(allocator, letter_counts);
+    defer huffman_tree.freeNode(allocator, root);
+
+    std.debug.print("Detailed Huffman Tree:\n", .{});
+    huffman_tree.printTree(root, 0);
 }
 
 pub fn countLetters(reader: anytype, allocator: std.mem.Allocator) !std.AutoHashMap(u8, usize) {
@@ -47,6 +47,8 @@ pub fn countLetters(reader: anytype, allocator: std.mem.Allocator) !std.AutoHash
 
     return letter_counts;
 }
+
+const testing = std.testing;
 
 test "letter count assertions from file" {
     const allocator = testing.allocator;
