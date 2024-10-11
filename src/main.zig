@@ -1,5 +1,5 @@
 const std = @import("std");
-const huffman_tree = @import("tree.zig");
+const tree = @import("tree.zig");
 
 const fs = std.fs;
 const io = std.io;
@@ -19,11 +19,11 @@ pub fn main() !void {
     var letter_counts = try countLetters(reader, allocator);
     defer letter_counts.deinit();
 
-    const root = try huffman_tree.PriorityQueue.buildTree(allocator, letter_counts);
-    defer huffman_tree.freeNode(allocator, root);
+    const root = try tree.PriorityQueue.buildTree(allocator, letter_counts);
+    defer tree.freeNode(allocator, root);
 
     std.debug.print("Detailed Huffman Tree:\n", .{});
-    huffman_tree.printTree(root, 0);
+    tree.printTree(root, 0);
 }
 
 pub fn countLetters(reader: anytype, allocator: std.mem.Allocator) !std.AutoHashMap(u8, usize) {
@@ -36,7 +36,7 @@ pub fn countLetters(reader: anytype, allocator: std.mem.Allocator) !std.AutoHash
             else => return err,
         };
 
-        if (ascii.isAlphabetic(byte)) {
+        if (ascii.isASCII(byte)) {
             const result = try letter_counts.getOrPut(byte);
             if (!result.found_existing) {
                 result.value_ptr.* = 0;

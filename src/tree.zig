@@ -1,7 +1,7 @@
 const std = @import("std");
 const testing = std.testing;
 
-const Node = struct {
+pub const Node = struct {
     character: u8,
     frequency: usize,
     left: ?*Node,
@@ -329,10 +329,14 @@ test "PriorityQueue bubbleUp" {
     const nodeE = try Node.init(testing.allocator, 'E', 20);
     defer testing.allocator.destroy(nodeE);
 
+    const nodeF = try Node.init(testing.allocator, ' ', 15);
+    defer testing.allocator.destroy(nodeF);
+
     // Test case 1: Bubble up from bottom
     try pq.insert(nodeA);
     try pq.insert(nodeB);
     try pq.insert(nodeC);
+    try pq.insert(nodeF);
     try testing.expectEqual(@as(u8, 'C'), pq.nodes[0].?.character);
 
     // Test case 2: No bubble up needed
@@ -342,7 +346,7 @@ test "PriorityQueue bubbleUp" {
     // Test case 3: Partial bubble up
     try pq.insert(nodeE);
     try testing.expectEqual(@as(u8, 'C'), pq.nodes[0].?.character);
-    try testing.expectEqual(@as(u8, 'E'), pq.nodes[1].?.character);
+    try testing.expectEqual(@as(u8, ' '), pq.nodes[1].?.character);
 }
 
 test "PriorityQueue remove" {
