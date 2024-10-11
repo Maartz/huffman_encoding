@@ -67,6 +67,75 @@ const PriorityQueue = struct {
             current_index = parent_index;
         }
     }
+
+    pub fn remove(self: *PriorityQueue) !?*Node {
+        if (self.len == 0) return null;
+
+        const root = self.nodes[0];
+        self.nodes[0] = self.nodes[self.len - 1];
+        self.len -= 1;
+
+        if (self.len > 0) {
+            self.bubbleDown(0);
+        }
+
+        return root;
+    }
+
+    pub fn bubbleDown(self: *PriorityQueue, index: usize) void {
+        var current_index = index;
+        const len = self.len;
+
+        while (true) {
+            var smallest = current_index;
+            // In a binary heap implemented using an array, we use a specific formula to calculate the indices of child nodes:
+            //     0
+            //   /   \
+            //  1     2
+            // / \   / \
+            //3   4 5   6
+            // When represented as an array: [0, 1, 2, 3, 4, 5, 6]
+            // For node at index 0:
+            // Left child: 2 * 0 + 1 = 1
+            // Right child: 2 * 0 + 2 = 2, etc.
+            const left_child = 2 * current_index + 1;
+            const right_child = 2 * current_index + 2;
+
+            // Check if left child is smaller than current smallest
+            if (left_child < len) {
+                if (self.nodes[left_child]) |left| {
+                    if (self.nodes[smallest]) |smallest_node| {
+                        if (left.frequency < smallest_node.frequency) {
+                            smallest = left_child;
+                        }
+                    }
+                }
+            }
+
+            // Check if right child is smaller than current smallest
+            if (right_child < len) {
+                if (self.nodes[right_child]) |right| {
+                    if (self.nodes[smallest]) |smallest_node| {
+                        if (right.frequency < smallest_node.frequency) {
+                            smallest = right_child;
+                        }
+                    }
+                }
+            }
+            // If smallest is still the current index, we're done
+            if (smallest == current_index) {
+                break;
+            }
+
+            // Swap current node with the smallest child
+            const temp = self.nodes[current_index];
+            self.nodes[current_index] = self.nodes[smallest];
+            self.nodes[smallest] = temp;
+
+            // Move down to the child we swapped with
+            current_index = smallest;
+        }
+    }
 };
 
 test "Node init" {
