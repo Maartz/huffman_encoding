@@ -67,9 +67,15 @@ pub fn parseArgs(allocator: std.mem.Allocator) !struct {
 }
 
 pub fn readEntireFile(allocator: std.mem.Allocator, file: fs.File) ![]u8 {
-    // TODO: Adding a maximum file size limit to prevent excessive memory usage (something like 1MB)
+    // 1MB limit
+    const max_file_size = 1 * 1024 * 1024;
+
     // Caveat: This assumes the file isn't being modified while we're reading it
     const file_size = try file.getEndPos();
+
+    if (file_size > max_file_size) {
+        return error.FileTooLarge;
+    }
 
     const buffer_size = std.math.cast(usize, file_size) orelse return error.FileTooLarge;
     const buffer = try allocator.alloc(u8, buffer_size);
