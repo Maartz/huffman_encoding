@@ -21,7 +21,7 @@ Once compiled, the program can be run with the following parameters:
 
 - `--input <file.txt>`: The input file that contains the data to be encoded.
 - `--output <myencodeddata>`: The output file where the encoded data will be written.
-- `--tree <huffman_tree_file>` (optional): An optional parameter to pass a custom Huffman tree from a text file to use for encoding.
+- `--tree <huffman_tree_file>` (optional): An optional parameter to pass your own text to generate a Huffman tree used for encoding.
 
 ### Example
 
