@@ -1,5 +1,6 @@
 const std = @import("std");
 const tree = @import("tree.zig");
+const encoder = @import("encoder.zig");
 
 const fs = std.fs;
 const io = std.io;
@@ -22,8 +23,16 @@ pub fn main() !void {
     const root = try tree.PriorityQueue.buildTree(allocator, letter_counts);
     defer tree.freeNode(allocator, root);
 
-    std.debug.print("Detailed Huffman Tree:\n", .{});
-    tree.printTree(root, 0);
+    var huffman_encoder = encoder.Encoder.init(allocator);
+    defer huffman_encoder.deinit();
+    try huffman_encoder.generateCodes(root);
+
+    const sample_text = "Hello, World!";
+    const encoded = try huffman_encoder.encode(sample_text);
+    defer allocator.free(encoded);
+
+    std.debug.print("\nSample text: {s}\n", .{sample_text});
+    std.debug.print("Encoded: {s}\n", .{encoded});
 }
 
 pub fn countLetters(reader: anytype, allocator: std.mem.Allocator) !std.AutoHashMap(u8, usize) {
