@@ -86,6 +86,7 @@ pub const Encoder = struct {
 
         for (text) |char| {
             const code = self.codes.get(char) orelse {
+                std.debug.print("ASCII: Code {}\n", .{char});
                 return error.CharacterNotInCodeTable;
             };
             std.debug.print("Character '{}' (ASCII {}): Code {s}\n", .{ char, char, code });
