@@ -78,7 +78,7 @@ pub const Encoder = struct {
         try self.codes.put(character, code_copy);
     }
 
-    fn encode(self: *Encoder, text: []const u8) ![]u8 {
+    pub fn encode(self: *Encoder, text: []const u8) ![]u8 {
         var encoded_result = std.ArrayList(u8).init(self.allocator);
         // Maybe redundant as `ArrayList.toOwnedSlice`
         // pass the deinit step to the caller
