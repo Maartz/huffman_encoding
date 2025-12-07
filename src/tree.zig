@@ -1,6 +1,8 @@
 const std = @import("std");
 const testing = std.testing;
 
+const encoded_data = @import("encoded_data.zig");
+
 pub const Node = struct {
     character: u8,
     frequency: usize,
@@ -208,6 +210,10 @@ pub fn freeNode(allocator: std.mem.Allocator, node: *Node) void {
     allocator.destroy(node);
 }
 
+pub fn isLeaf(node: *Node) bool {
+    return node.left == null and node.right == null;
+}
+
 fn verifyTreeStructure(node: *Node) !void {
     if (node.left) |left| {
         try testing.expect(left.frequency <= node.frequency);
@@ -216,6 +222,32 @@ fn verifyTreeStructure(node: *Node) !void {
     if (node.right) |right| {
         try testing.expect(right.frequency <= node.frequency);
         try verifyTreeStructure(right);
+    }
+}
+
+pub fn serializeTree(node: *Node, writer: *encoded_data.BitWriter) !void {
+    if (node.left == null and node.right == null) {
+        try writer.writeBit(1);
+        try writer.writeByte(node.character);
+    } else {
+        try writer.writeBit(0);
+        if (node.left) |left| try serializeTree(left, writer);
+        if (node.right) |right| try serializeTree(right, writer);
+    }
+}
+
+pub fn reconstructTree(allocator: std.mem.Allocator, reader: *encoded_data.BitReader) !*Node {
+    const bit = reader.readBit();
+    if (bit == 1) {
+        const character = reader.readByte();
+        return Node.init(allocator, character, 0);
+    } else {
+        const left = try reconstructTree(allocator, reader);
+        const right = try reconstructTree(allocator, reader);
+        const node = try Node.init(allocator, 0, 0);
+        node.left = left;
+        node.right = right;
+        return node;
     }
 }
 

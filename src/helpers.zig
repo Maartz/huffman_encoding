@@ -4,6 +4,9 @@ const io = std.io;
 const ascii = std.ascii;
 const testing = std.testing;
 
+const encoded_data = @import("encoded_data.zig");
+const tree = @import("tree.zig");
+
 pub fn printStatistics(original: []const u8, encoded: []const u8) void {
     const original_bytes = original.len;
     const encoded_bytes = (encoded.len + 7) / 8; // Round up to nearest byte
@@ -16,17 +19,14 @@ pub fn printStatistics(original: []const u8, encoded: []const u8) void {
     std.debug.print("Compression ratio: {d:.2}\n", .{compression_ratio});
 }
 
-pub fn parseArgs(allocator: std.mem.Allocator) !struct {
-    input_filename: []const u8,
-    output_filename: []const u8,
-    tree_filename: ?[]const u8,
-} {
+pub fn parseArgs(allocator: std.mem.Allocator) !struct { input_filename: []const u8, output_filename: []const u8, tree_filename: ?[]const u8, decode: bool } {
     const args = try std.process.argsAlloc(allocator);
     defer std.process.argsFree(allocator, args);
 
     var input_filename: ?[]const u8 = null;
     var output_filename: ?[]const u8 = null;
     var tree_filename: ?[]const u8 = null;
+    var decode = false;
 
     var i: usize = 1;
     while (i < args.len) : (i += 1) {
@@ -54,6 +54,10 @@ pub fn parseArgs(allocator: std.mem.Allocator) !struct {
             }
             i += 1;
         }
+
+        if (std.mem.eql(u8, args[i], "--decode")) {
+            decode = true;
+        }
     }
 
     if (input_filename == null or output_filename == null) {
@@ -64,6 +68,7 @@ pub fn parseArgs(allocator: std.mem.Allocator) !struct {
         .input_filename = input_filename.?,
         .output_filename = output_filename.?,
         .tree_filename = tree_filename,
+        .decode = decode,
     };
 }
 
@@ -107,42 +112,27 @@ pub fn countLetters(input: []const u8, allocator: std.mem.Allocator) !std.AutoHa
     return letter_counts;
 }
 
-pub fn writeEncodedToFile(filename: []const u8, encoded: []const u8) !void {
+pub fn writeEncodedToFile(filename: []const u8, root: *tree.Node, encoded: []const u8, allocator: std.mem.Allocator) !void {
+    var bit_writer = try encoded_data.BitWriter.init(allocator);
+    defer bit_writer.deinit();
+
+    try tree.serializeTree(root, &bit_writer);
+
+    for (encoded) |bit_char| {
+        const bit: u1 = @intCast(bit_char - '0');
+        try bit_writer.writeBit(bit);
+    }
+
+    const last_byte_bit_count = bit_writer.bit_position;
+    const data = bit_writer.finish();
+
     const file = try fs.cwd().createFile(filename, .{});
     defer file.close();
 
-    var stdout_buffer: [4096]u8 = undefined;
-    var writer = file.writer(&stdout_buffer).interface;
-
-    // Buffer to hold a byte for packing bits
-    var byte: u8 = 0;
-    var bit_count: u3 = 0;
-    var total_bits: usize = 0;
-
-    for (encoded) |bit_char| {
-        // TODO: not why - 0
-        const bit = @as(u1, @intCast(bit_char - '0'));
-
-        // Pack the bit into the current byte
-        byte = (byte << 1) | bit;
-        bit_count +%= 1;
-        total_bits += 1;
-
-        // it's gonna be 0 after wrapping +%=
-        if (bit_count == 0) {
-            try writer.writeByte(byte);
-            byte = 0;
-        }
-    }
-
-    // Pad with zeros
-    if (bit_count != 0) {
-        byte <<= @as(u3, 0) -% bit_count;
-        try writer.writeByte(byte);
-    }
-
-    // Necessary for decoding, :^) will be done later
-    try writer.writeByte(@as(u8, @intCast(bit_count)));
+    var writer_buffer: [4096]u8 = undefined;
+    var writer = file.writer(&writer_buffer).interface;
+    try writer.writeAll(data);
+    try writer.writeByte(@as(u8, last_byte_bit_count));
     try writer.flush();
 }
 

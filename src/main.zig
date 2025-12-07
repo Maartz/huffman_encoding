@@ -1,9 +1,10 @@
-const tree = @import("tree.zig");
-const encoder = @import("encoder.zig");
-const helpers = @import("helpers.zig");
-
 const std = @import("std");
 const fs = std.fs;
+
+const encoded_data = @import("encoded_data.zig");
+const encoder = @import("encoder.zig");
+const helpers = @import("helpers.zig");
+const tree = @import("tree.zig");
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -17,26 +18,40 @@ pub fn main() !void {
         if (args.tree_filename) |tf| allocator.free(tf);
     }
 
-    const input_file = try fs.cwd().openFile(args.input_filename, .{});
-    defer input_file.close();
+    if (args.decode) {
+        const e_data = try encoded_data.readEncodedFile(args.input_filename, allocator);
+        defer allocator.free(e_data.data);
+        var bit_reader = encoded_data.BitReader.init(e_data.data);
 
-    const input_text = try helpers.readEntireFile(allocator, input_file);
-    defer allocator.free(input_text);
+        const root = try tree.reconstructTree(allocator, &bit_reader);
+        defer tree.freeNode(allocator, root);
 
-    var letter_counts = try helpers.countLetters(input_text, allocator);
-    defer letter_counts.deinit();
+        const decoded = try encoded_data.decodeText(&bit_reader, root, e_data.last_byte_bit_count, allocator);
+        defer allocator.free(decoded);
 
-    const root = try tree.PriorityQueue.buildTree(allocator, letter_counts);
-    defer tree.freeNode(allocator, root);
+        try encoded_data.writeTextToFile(args.output_filename, decoded);
+    } else {
+        const input_file = try fs.cwd().openFile(args.input_filename, .{});
+        defer input_file.close();
 
-    var huffman_encoder = encoder.Encoder.init(allocator);
-    defer huffman_encoder.deinit();
-    try huffman_encoder.generateCodes(root);
+        const input_text = try helpers.readEntireFile(allocator, input_file);
+        defer allocator.free(input_text);
 
-    const encoded = try huffman_encoder.encode(input_text);
-    defer allocator.free(encoded);
+        var letter_counts = try helpers.countLetters(input_text, allocator);
+        defer letter_counts.deinit();
 
-    try helpers.writeEncodedToFile(args.output_filename, encoded);
+        const root = try tree.PriorityQueue.buildTree(allocator, letter_counts);
+        defer tree.freeNode(allocator, root);
 
-    helpers.printStatistics(input_text, encoded);
+        var huffman_encoder = encoder.Encoder.init(allocator);
+        defer huffman_encoder.deinit();
+        try huffman_encoder.generateCodes(root);
+
+        const encoded = try huffman_encoder.encode(input_text);
+        defer allocator.free(encoded);
+
+        try helpers.writeEncodedToFile(args.output_filename, root, encoded, allocator);
+
+        helpers.printStatistics(input_text, encoded);
+    }
 }
