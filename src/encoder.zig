@@ -1,6 +1,7 @@
 const std = @import("std");
-const tree = @import("tree.zig");
 const testing = std.testing;
+
+const tree = @import("tree.zig");
 
 pub const Encoder = struct {
     codes: std.AutoHashMap(u8, []const u8),
@@ -22,8 +23,8 @@ pub const Encoder = struct {
     }
 
     pub fn generateCodes(self: *Encoder, root: *tree.Node) !void {
-        var code = std.ArrayList(u8).init(self.allocator);
-        defer code.deinit();
+        var code = try std.ArrayList(u8).initCapacity(self.allocator, 64);
+        defer code.deinit(self.allocator);
 
         try self.generateCodesHelper(root, &code);
     }
@@ -61,13 +62,13 @@ pub const Encoder = struct {
         }
 
         if (node.left) |left_child| {
-            try code.append('0');
+            try code.append(self.allocator, '0');
             try self.generateCodesHelper(left_child, code);
             _ = code.pop();
         }
 
         if (node.right) |right_child| {
-            try code.append('1');
+            try code.append(self.allocator, '1');
             try self.generateCodesHelper(right_child, code);
             _ = code.pop();
         }
@@ -79,26 +80,16 @@ pub const Encoder = struct {
     }
 
     pub fn encode(self: *Encoder, text: []const u8) ![]u8 {
-        var encoded_result = std.ArrayList(u8).init(self.allocator);
-        // Maybe redundant as `ArrayList.toOwnedSlice`
-        // pass the deinit step to the caller
-        defer encoded_result.deinit();
+        var encoded_result = try std.ArrayList(u8).initCapacity(self.allocator, text.len * 8);
+        defer encoded_result.deinit(self.allocator);
 
         for (text) |char| {
             const code = self.codes.get(char) orelse {
-                std.debug.print("ASCII: Code {}\n", .{char});
                 return error.CharacterNotInCodeTable;
             };
-            std.debug.print("Character '{}' (ASCII {}): Code {s}\n", .{ char, char, code });
-            try encoded_result.appendSlice(code);
-            std.debug.print("Current encoded result: ", .{});
-            for (encoded_result.items) |bit| {
-                std.debug.print("{c}", .{bit});
-            }
-            std.debug.print("\n", .{});
+            try encoded_result.appendSlice(self.allocator, code);
         }
-
-        return encoded_result.toOwnedSlice();
+        return encoded_result.toOwnedSlice(self.allocator);
     }
 };
 

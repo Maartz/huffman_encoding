@@ -2,6 +2,7 @@ const std = @import("std");
 const fs = std.fs;
 const io = std.io;
 const ascii = std.ascii;
+const testing = std.testing;
 
 pub fn printStatistics(original: []const u8, encoded: []const u8) void {
     const original_bytes = original.len;
@@ -95,6 +96,7 @@ pub fn countLetters(input: []const u8, allocator: std.mem.Allocator) !std.AutoHa
     errdefer letter_counts.deinit();
 
     for (input) |byte| {
+        // TODO: upper or lower the byte to avoid X and x to be treated as 2 diff letters
         const result = try letter_counts.getOrPut(byte);
         if (!result.found_existing) {
             result.value_ptr.* = 0;
@@ -109,7 +111,8 @@ pub fn writeEncodedToFile(filename: []const u8, encoded: []const u8) !void {
     const file = try fs.cwd().createFile(filename, .{});
     defer file.close();
 
-    var writer = file.writer();
+    var stdout_buffer: [4096]u8 = undefined;
+    var writer = file.writer(&stdout_buffer).interface;
 
     // Buffer to hold a byte for packing bits
     var byte: u8 = 0;
@@ -117,6 +120,7 @@ pub fn writeEncodedToFile(filename: []const u8, encoded: []const u8) !void {
     var total_bits: usize = 0;
 
     for (encoded) |bit_char| {
+        // TODO: not why - 0
         const bit = @as(u1, @intCast(bit_char - '0'));
 
         // Pack the bit into the current byte
@@ -139,9 +143,8 @@ pub fn writeEncodedToFile(filename: []const u8, encoded: []const u8) !void {
 
     // Necessary for decoding, :^) will be done later
     try writer.writeByte(@as(u8, @intCast(bit_count)));
+    try writer.flush();
 }
-
-const testing = std.testing;
 
 test "letter count assertions from file" {
     const allocator = testing.allocator;
