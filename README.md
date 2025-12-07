@@ -1,15 +1,23 @@
 
 # Huffman Encoding Project
 
-This project is a deliberate practice exercise to become more familiar with memory-managed languages, specifically using the Zig programming language. The challenge tackled here is implementing a Huffman Encoder/Decoder, an idea inspired by the coding challenge found [here](https://codingchallenges.fyi/challenges/challenge-huffman/#the-challenge---building-a-huffman-encoderdecoder).
+A complete Huffman encoder/decoder implementation in Zig. This project is a deliberate practice exercise to become more familiar with low-level programming and memory management, inspired by the coding challenge found [here](https://codingchallenges.fyi/challenges/challenge-huffman/#the-challenge---building-a-huffman-encoderdecoder).
+
+## Features
+
+- Full Huffman compression and decompression
+- Binary tree serialization/deserialization
+- Bit-level I/O operations
+- Dynamic buffer management
+- Works on any file type (optimized for text)
 
 ## Requirements
 
-To compile and run this project, you must have Zig installed from the `@master` branch. You can install Zig by following the instructions from the official [Zig website](https://ziglang.org/download/).
+- Zig 0.15.2 or later
 
-## Compilation
+Install Zig by following the instructions from the official [Zig website](https://ziglang.org/download/).
 
-To compile the project, simply run:
+## Build
 
 ```sh
 zig build
@@ -17,24 +25,81 @@ zig build
 
 ## Usage
 
-Once compiled, the program can be run with the following parameters:
+### Encode (compress)
 
-- `--input <file.txt>`: The input file that contains the data to be encoded.
-- `--output <myencodeddata>`: The output file where the encoded data will be written.
-- `--tree <huffman_tree_file>` (optional): An optional parameter to pass your own text to generate a Huffman tree used for encoding.
+```sh
+./zig-out/bin/huffman --input <file> --output <compressed_file>
+```
+
+### Decode (decompress)
+
+```sh
+./zig-out/bin/huffman --decode --input <compressed_file> --output <decompressed_file>
+```
 
 ### Example
 
 ```sh
-./huffman --input file.txt --output encoded_output --tree my_tree.txt
+# Compress a text file
+./zig-out/bin/huffman --input book.txt --output book.huff
+
+# Decompress it back
+./zig-out/bin/huffman --decode --input book.huff --output book_decoded.txt
+
+# Verify the files are identical
+diff book.txt book_decoded.txt
 ```
 
-If you omit the `--tree` parameter, the program will generate its own Huffman tree based on a specific file in the project `135-0.txt`.
+## Performance
+
+Huffman encoding works best on files with non-uniform byte distribution:
+
+| File Type | Typical Compression Ratio |
+|-----------|---------------------------|
+| Plain text | 1.5x - 2x |
+| Source code | 1.5x - 1.8x |
+| Already compressed (PDF, JPG, ZIP) | ~1x (no gain) |
+
+Example on a 750KB text file:
+```
+Original: 752583 bytes
+Encoded:  434232 bytes
+Compression ratio: 1.73
+```
+
+## How It Works
+
+1. **Frequency Analysis**: Count byte occurrences in the input file
+2. **Tree Construction**: Build a Huffman tree using a priority queue
+3. **Code Generation**: Generate variable-length binary codes (frequent bytes get shorter codes)
+4. **Encoding**: Replace each byte with its Huffman code
+5. **Serialization**: Store the tree and encoded data in the output file
+
+The compressed file format:
+```
+[serialized tree][encoded data][padding info (1 byte)]
+```
+
+## Project Structure
+
+```
+src/
+  main.zig         - Entry point, CLI handling
+  tree.zig         - Huffman tree and priority queue
+  encoder.zig      - Code generation and encoding
+  encoded_data.zig - BitReader/BitWriter, decoding
+  helpers.zig      - File I/O, argument parsing
+```
 
 ## Learning Objective
 
-The purpose of this project is to practice working with a memory-managed language and to implement a classic compression algorithm from scratch.
+This project was built to practice:
+- Manual memory management with allocators
+- Bit manipulation and binary I/O
+- Tree data structures
+- Low-level file operations
+- Zig's type system and error handling
 
 ## Acknowledgments
 
-This project is based on the Huffman encoding challenge found at [Coding Challenges](https://codingchallenges.fyi/challenges/challenge-huffman/#the-challenge---building-a-huffman-encoderdecoder).
+Based on the Huffman encoding challenge from [Coding Challenges](https://codingchallenges.fyi/challenges/challenge-huffman/#the-challenge---building-a-huffman-encoderdecoder).
