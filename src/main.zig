@@ -18,6 +18,26 @@ pub fn main() !void {
         if (args.tree_filename) |tf| allocator.free(tf);
     }
 
+    if (args.help) {
+        const help_text =
+            \\Usage: huffman --input <file> --output <file> [options]
+            \\
+            \\Options:
+            \\  --input <file>     Input file to encode/decode (required)
+            \\  --output <file>    Output file (required)
+            \\  --decode           Decode mode (default: encode)
+            \\  --tree <file>      Save Huffman tree to file
+            \\  --help             Display this help message
+            \\
+            \\Examples:
+            \\  huffman --input text.txt --output text.huff
+            \\  huffman --decode --input text.huff --output decoded.txt
+            \\
+        ;
+        std.debug.print("{s}", .{help_text});
+        return;
+    }
+
     if (args.decode) {
         const e_data = try encoded_data.readEncodedFile(args.input_filename, allocator);
         defer allocator.free(e_data.data);

@@ -19,7 +19,9 @@ pub fn printStatistics(original: []const u8, encoded: []const u8) void {
     std.debug.print("Compression ratio: {d:.2}\n", .{compression_ratio});
 }
 
-pub fn parseArgs(allocator: std.mem.Allocator) !struct { input_filename: []const u8, output_filename: []const u8, tree_filename: ?[]const u8, decode: bool } {
+const Arg = enum { input, output, tree, decode, help, unknown };
+
+pub fn parseArgs(allocator: std.mem.Allocator) !struct { input_filename: []const u8, output_filename: []const u8, tree_filename: ?[]const u8, decode: bool, help: bool } {
     const args = try std.process.argsAlloc(allocator);
     defer std.process.argsFree(allocator, args);
 
@@ -27,40 +29,58 @@ pub fn parseArgs(allocator: std.mem.Allocator) !struct { input_filename: []const
     var output_filename: ?[]const u8 = null;
     var tree_filename: ?[]const u8 = null;
     var decode = false;
+    var help = false;
 
     var i: usize = 1;
     while (i < args.len) : (i += 1) {
-        if (std.mem.eql(u8, args[i], "--input")) {
-            if (i + 1 < args.len) {
-                input_filename = try allocator.dupe(u8, args[i + 1]);
-            } else {
-                return error.MissingInputFilename;
-            }
-            i += 1;
-        }
-
-        if (std.mem.eql(u8, args[i], "--output")) {
-            if (i + 1 < args.len) {
-                output_filename = try allocator.dupe(u8, args[i + 1]);
-            } else {
-                return error.MissingOutputFilename;
-            }
-            i += 1;
-        }
-
-        if (std.mem.eql(u8, args[i], "--tree")) {
-            if (i + 1 < args.len) {
-                tree_filename = try allocator.dupe(u8, args[i + 1]);
-            }
-            i += 1;
-        }
-
-        if (std.mem.eql(u8, args[i], "--decode")) {
-            decode = true;
+        switch (parseArg(args[i])) {
+            .input => {
+                if (i + 1 < args.len) {
+                    input_filename = try allocator.dupe(u8, args[i + 1]);
+                } else {
+                    return error.MissingInputFilename;
+                }
+                i += 1;
+            },
+            .output => {
+                if (i + 1 < args.len) {
+                    output_filename = try allocator.dupe(u8, args[i + 1]);
+                } else {
+                    return error.MissingOutputFilename;
+                }
+                i += 1;
+            },
+            .tree => {
+                if (i + 1 < args.len) {
+                    tree_filename = try allocator.dupe(u8, args[i + 1]);
+                } else {
+                    return error.MissingTreeFilename;
+                }
+                i += 1;
+            },
+            .decode => {
+                decode = true;
+            },
+            .help => {
+                help = true;
+            },
+            else => {
+                return error.UnknownArgument;
+            },
         }
     }
 
-    if (input_filename == null or output_filename == null) {
+    if (help) {
+        return .{
+            .input_filename = "",
+            .output_filename = "",
+            .tree_filename = null,
+            .decode = false,
+            .help = help,
+        };
+    }
+
+    if (!help and input_filename == null or output_filename == null) {
         return error.MissingMandatoryArgument;
     }
 
@@ -69,6 +89,7 @@ pub fn parseArgs(allocator: std.mem.Allocator) !struct { input_filename: []const
         .output_filename = output_filename.?,
         .tree_filename = tree_filename,
         .decode = decode,
+        .help = false,
     };
 }
 
@@ -134,6 +155,25 @@ pub fn writeEncodedToFile(filename: []const u8, root: *tree.Node, encoded: []con
     try writer.writeAll(data);
     try writer.writeByte(@as(u8, last_byte_bit_count));
     try writer.flush();
+}
+
+fn compare(arg: []const u8, flag: []const u8) bool {
+    return std.mem.eql(u8, arg, flag);
+}
+
+fn parseArg(str: []const u8) Arg {
+    if (compare(str, "--input")) {
+        return .input;
+    } else if (compare(str, "--output")) {
+        return .output;
+    } else if (compare(str, "--tree")) {
+        return .tree;
+    } else if (compare(str, "--decode")) {
+        return .decode;
+    } else if (compare(str, "--help")) {
+        return .help;
+    }
+    return .unknown;
 }
 
 test "letter count assertions from file" {

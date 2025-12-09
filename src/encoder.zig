@@ -57,7 +57,6 @@ pub const Encoder = struct {
         // We insert each time we reach a leaf node
         if (node.left == null and node.right == null) {
             try self.storeCode(node.character, code.items);
-            std.debug.print("Stored code for '{}': {s}\n", .{ node.character, code.items });
             return;
         }
 
