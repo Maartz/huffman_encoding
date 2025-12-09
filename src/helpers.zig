@@ -19,15 +19,14 @@ pub fn printStatistics(original: []const u8, encoded: []const u8) void {
     std.debug.print("Compression ratio: {d:.2}\n", .{compression_ratio});
 }
 
-const Arg = enum { input, output, tree, decode, help, unknown };
+const Arg = enum { input, output, decode, help, unknown };
 
-pub fn parseArgs(allocator: std.mem.Allocator) !struct { input_filename: []const u8, output_filename: []const u8, tree_filename: ?[]const u8, decode: bool, help: bool } {
+pub fn parseArgs(allocator: std.mem.Allocator) !struct { input_filename: []const u8, output_filename: []const u8, decode: bool, help: bool } {
     const args = try std.process.argsAlloc(allocator);
     defer std.process.argsFree(allocator, args);
 
     var input_filename: ?[]const u8 = null;
     var output_filename: ?[]const u8 = null;
-    var tree_filename: ?[]const u8 = null;
     var decode = false;
     var help = false;
 
@@ -50,14 +49,6 @@ pub fn parseArgs(allocator: std.mem.Allocator) !struct { input_filename: []const
                 }
                 i += 1;
             },
-            .tree => {
-                if (i + 1 < args.len) {
-                    tree_filename = try allocator.dupe(u8, args[i + 1]);
-                } else {
-                    return error.MissingTreeFilename;
-                }
-                i += 1;
-            },
             .decode => {
                 decode = true;
             },
@@ -74,7 +65,6 @@ pub fn parseArgs(allocator: std.mem.Allocator) !struct { input_filename: []const
         return .{
             .input_filename = "",
             .output_filename = "",
-            .tree_filename = null,
             .decode = false,
             .help = help,
         };
@@ -87,7 +77,6 @@ pub fn parseArgs(allocator: std.mem.Allocator) !struct { input_filename: []const
     return .{
         .input_filename = input_filename.?,
         .output_filename = output_filename.?,
-        .tree_filename = tree_filename,
         .decode = decode,
         .help = false,
     };
@@ -166,8 +155,6 @@ fn parseArg(str: []const u8) Arg {
         return .input;
     } else if (compare(str, "--output")) {
         return .output;
-    } else if (compare(str, "--tree")) {
-        return .tree;
     } else if (compare(str, "--decode")) {
         return .decode;
     } else if (compare(str, "--help")) {

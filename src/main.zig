@@ -15,7 +15,6 @@ pub fn main() !void {
     defer {
         allocator.free(args.input_filename);
         allocator.free(args.output_filename);
-        if (args.tree_filename) |tf| allocator.free(tf);
     }
 
     if (args.help) {
@@ -26,7 +25,6 @@ pub fn main() !void {
             \\  --input <file>     Input file to encode/decode (required)
             \\  --output <file>    Output file (required)
             \\  --decode           Decode mode (default: encode)
-            \\  --tree <file>      Save Huffman tree to file
             \\  --help             Display this help message
             \\
             \\Examples:
@@ -39,7 +37,15 @@ pub fn main() !void {
     }
 
     if (args.decode) {
-        const e_data = try encoded_data.readEncodedFile(args.input_filename, allocator);
+        const e_data = encoded_data.readEncodedFile(args.input_filename, allocator) catch |err| {
+            switch (err) {
+                error.FileNotFound => {
+                    std.debug.print("File not found: {s}\n", .{args.input_filename});
+                    return;
+                },
+                else => return err,
+            }
+        };
         defer allocator.free(e_data.data);
         var bit_reader = encoded_data.BitReader.init(e_data.data);
 
@@ -51,7 +57,15 @@ pub fn main() !void {
 
         try encoded_data.writeTextToFile(args.output_filename, decoded);
     } else {
-        const input_file = try fs.cwd().openFile(args.input_filename, .{});
+        const input_file = fs.cwd().openFile(args.input_filename, .{}) catch |err| {
+            switch (err) {
+                error.FileNotFound => {
+                    std.debug.print("File not found: {s}\n", .{args.input_filename});
+                    return;
+                },
+                else => return err,
+            }
+        };
         defer input_file.close();
 
         const input_text = try helpers.readEntireFile(allocator, input_file);
