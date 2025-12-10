@@ -125,6 +125,7 @@ pub fn decodeText(reader: *BitReader, root: *tree.Node, last_byte_bit_count: u3,
     errdefer result.deinit(allocator);
 
     var current_node = root;
+
     while (!reader.atEnd()) {
         const on_last_byte = reader.byte_index == reader.data.len - 1;
         const past_valid_bits = (last_byte_bit_count != 0) and (reader.bit_position >=

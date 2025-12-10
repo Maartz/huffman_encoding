@@ -5,11 +5,12 @@ const ascii = std.ascii;
 const testing = std.testing;
 
 const encoded_data = @import("encoded_data.zig");
+const encoder = @import("encoder.zig");
 const tree = @import("tree.zig");
 
-pub fn printStatistics(original: []const u8, encoded: []const u8) void {
+pub fn printStatistics(original: []const u8, encoded: encoder.EncodedResult) void {
     const original_bytes = original.len;
-    const encoded_bytes = (encoded.len + 7) / 8; // Round up to nearest byte
+    const encoded_bytes = (encoded.data.len + 7) / 8; // Round up to nearest byte
 
     std.debug.print("\nByte count comparison:\n", .{});
     std.debug.print("Original: {} bytes\n", .{original_bytes});
@@ -122,15 +123,26 @@ pub fn countLetters(input: []const u8, allocator: std.mem.Allocator) !std.AutoHa
     return letter_counts;
 }
 
-pub fn writeEncodedToFile(filename: []const u8, root: *tree.Node, encoded: []const u8, allocator: std.mem.Allocator) !void {
+pub fn writeEncodedToFile(filename: []const u8, root: *tree.Node, encoded: encoder.EncodedResult, allocator: std.mem.Allocator) !void {
     var bit_writer = try encoded_data.BitWriter.init(allocator);
     defer bit_writer.deinit();
 
     try tree.serializeTree(root, &bit_writer);
 
-    for (encoded) |byte| {
+    for (encoded.data[0 .. encoded.data.len - 1]) |byte| {
         try bit_writer.writeByte(byte);
     }
+
+    if (encoded.data.len > 0) {
+        const last_byte = encoded.data[encoded.data.len - 1];
+        const valid_bits: u4 = if (encoded.last_byte_bits == 0) 8 else @as(u4, encoded.last_byte_bits);
+        for (0..valid_bits) |i| {
+            const shift: u3 = @intCast(7 - i);
+            const bit: u1 = @intCast((last_byte >> shift) & 1);
+            try bit_writer.writeBit(bit);
+        }
+    }
+
     const last_byte_bit_count = bit_writer.bit_position;
     const data = bit_writer.finish();
 

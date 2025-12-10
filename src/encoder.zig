@@ -26,6 +26,11 @@ pub const HuffmanCode = struct {
     }
 };
 
+pub const EncodedResult = struct {
+    data: []u8,
+    last_byte_bits: u3,
+};
+
 pub const Encoder = struct {
     codes: std.AutoHashMap(u8, HuffmanCode),
     allocator: std.mem.Allocator,
@@ -101,7 +106,7 @@ pub const Encoder = struct {
         try self.codes.put(character, huffman_code);
     }
 
-    pub fn encode(self: *Encoder, text: []const u8) ![]u8 {
+    pub fn encode(self: *Encoder, text: []const u8) !EncodedResult {
         var encoded_result = try encoded_data.BitWriter.init(self.allocator);
 
         for (text) |char| {
@@ -115,7 +120,7 @@ pub const Encoder = struct {
                 try encoded_result.writeBit(bit);
             }
         }
-        return encoded_result.toOwnedSlice();
+        return EncodedResult{ .data = try encoded_result.toOwnedSlice(), .last_byte_bits = encoded_result.bit_position };
     }
 };
 

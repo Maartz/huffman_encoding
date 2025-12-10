@@ -69,6 +69,12 @@ pub fn main() !void {
         defer input_file.close();
 
         const input_text = try helpers.readEntireFile(allocator, input_file);
+
+        if (input_text.len == 0) {
+            std.debug.print("Input file is empty\n", .{});
+            return;
+        }
+
         defer allocator.free(input_text);
 
         var letter_counts = try helpers.countLetters(input_text, allocator);
@@ -82,7 +88,7 @@ pub fn main() !void {
         try huffman_encoder.generateCodes(root);
 
         const encoded = try huffman_encoder.encode(input_text);
-        defer allocator.free(encoded);
+        defer allocator.free(encoded.data);
 
         try helpers.writeEncodedToFile(args.output_filename, root, encoded, allocator);
 

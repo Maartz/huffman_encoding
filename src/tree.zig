@@ -62,6 +62,15 @@ pub const PriorityQueue = struct {
             try pq.insert(parent);
         }
 
+        if (pq.len == 1) {
+            const leaf = (try pq.remove()) orelse return error.EmptyQueue;
+            const root = try Node.init(allocator, 0, leaf.frequency);
+            const dummy = try Node.init(allocator, 0, 0); // nœud dummy
+            root.left = leaf;
+            root.right = dummy;
+            return root;
+        }
+
         return (try pq.remove()) orelse return error.EmptyQueue;
     }
 
