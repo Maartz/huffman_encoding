@@ -111,6 +111,13 @@ pub const BitWriter = struct {
         }
         return self.data.items[0..self.byte_index];
     }
+
+    pub fn toOwnedSlice(self: *BitWriter) ![]u8 {
+        if (self.bit_position != 0) {
+            self.byte_index += 1;
+        }
+        return self.data.toOwnedSlice(self.allocator);
+    }
 };
 
 pub fn decodeText(reader: *BitReader, root: *tree.Node, last_byte_bit_count: u3, allocator: std.mem.Allocator) ![]u8 {

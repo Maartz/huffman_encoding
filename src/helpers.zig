@@ -128,11 +128,9 @@ pub fn writeEncodedToFile(filename: []const u8, root: *tree.Node, encoded: []con
 
     try tree.serializeTree(root, &bit_writer);
 
-    for (encoded) |bit_char| {
-        const bit: u1 = @intCast(bit_char - '0');
-        try bit_writer.writeBit(bit);
+    for (encoded) |byte| {
+        try bit_writer.writeByte(byte);
     }
-
     const last_byte_bit_count = bit_writer.bit_position;
     const data = bit_writer.finish();
 
